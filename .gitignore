@@ -48,6 +48,10 @@ dist-ssr/
 .env
 .env.local
 .env.production
+backend/.env
+backend/.env.local
+frontend/.env
+frontend/.env.local
 
 # IDEs
 .vscode/
