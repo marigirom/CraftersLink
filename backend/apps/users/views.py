@@ -4,6 +4,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.contrib.auth import authenticate
+from django.db import IntegrityError
+import logging
 from .models import User
 from .serializers import (
     UserSerializer,
@@ -11,6 +13,8 @@ from .serializers import (
     UserLoginSerializer,
     UserProfileUpdateSerializer
 )
+
+logger = logging.getLogger(__name__)
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -20,18 +24,46 @@ class UserRegistrationView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
     
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        try:
+            logger.info(f"Registration attempt for email: {request.data.get('email')}")
+            
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            user = serializer.save()
+            
+            logger.info(f"User registered successfully: {user.email}")
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'user': UserSerializer(user).data,
+                    'tokens': serializer.get_tokens(user)
+                },
+                'message': 'User registered successfully'
+            }, status=status.HTTP_201_CREATED)
         
-        return Response({
-            'success': True,
-            'data': {
-                'user': UserSerializer(user).data,
-                'tokens': serializer.get_tokens(user)
-            },
-            'message': 'User registered successfully'
-        }, status=status.HTTP_201_CREATED)
+        except IntegrityError as e:
+            logger.error(f"Registration integrity error: {str(e)}")
+            error_message = "Registration failed"
+            
+            if 'email' in str(e).lower():
+                error_message = "Email address is already registered"
+            elif 'username' in str(e).lower():
+                error_message = "Username is already taken"
+            
+            return Response({
+                'success': False,
+                'message': error_message,
+                'errors': {'detail': error_message}
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            logger.error(f"Registration error: {str(e)}", exc_info=True)
+            return Response({
+                'success': False,
+                'message': 'Registration failed. Please try again.',
+                'errors': {'detail': str(e)}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class UserLoginView(APIView):
@@ -39,23 +71,36 @@ class UserLoginView(APIView):
     permission_classes = [permissions.AllowAny]
     
     def post(self, request):
-        serializer = UserLoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            logger.info(f"Login attempt for email: {request.data.get('email')}")
+            
+            serializer = UserLoginSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            
+            user = serializer.validated_data['user']
+            refresh = RefreshToken.for_user(user)
+            
+            logger.info(f"User logged in successfully: {user.email}")
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'user': UserSerializer(user).data,
+                    'tokens': {
+                        'refresh': str(refresh),
+                        'access': str(refresh.access_token),
+                    }
+                },
+                'message': 'Login successful'
+            }, status=status.HTTP_200_OK)
         
-        user = serializer.validated_data['user']
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            'success': True,
-            'data': {
-                'user': UserSerializer(user).data,
-                'tokens': {
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
-                }
-            },
-            'message': 'Login successful'
-        }, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Login error: {str(e)}")
+            return Response({
+                'success': False,
+                'message': 'Login failed',
+                'errors': {'detail': str(e)}
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CurrentUserView(generics.RetrieveUpdateAPIView):
