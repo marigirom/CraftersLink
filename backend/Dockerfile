@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     musl-dev \
     libpq-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -24,14 +25,13 @@ RUN pip install --upgrade pip && \
 # Copy project
 COPY . /app/
 
-# Create media and logs directories
-RUN mkdir -p /app/media /app/logs
-
-# Collect static files
-RUN python manage.py collectstatic --noinput || true
+# Create necessary directories
+RUN mkdir -p /app/media /app/logs /app/staticfiles
 
 # Expose port
 EXPOSE 8000
 
 # Run migrations and start server
 CMD ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+
+# Made with Bob

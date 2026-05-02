@@ -1,0 +1,96 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: crafterslink-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-crafterslink}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - crafterslink_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: crafterslink-backend
+    command: sh -c "python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+      - backend_media:/app/media
+      - backend_static:/app/staticfiles
+      - backend_logs:/app/logs
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-dev-key-change-in-production}
+      - DB_NAME=${DB_NAME:-crafterslink}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres123}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,backend}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      - IBM_COS_ENDPOINT=${IBM_COS_ENDPOINT:-}
+      - IBM_COS_API_KEY=${IBM_COS_API_KEY:-}
+      - IBM_COS_INSTANCE_ID=${IBM_COS_INSTANCE_ID:-}
+      - IBM_COS_BUCKET_NAME=${IBM_COS_BUCKET_NAME:-crafterslink-media}
+      - IBM_COS_AUTH_ENDPOINT=${IBM_COS_AUTH_ENDPOINT:-https://iam.cloud.ibm.com/identity/token}
+      - IBM_COS_PUBLIC_ENDPOINT=${IBM_COS_PUBLIC_ENDPOINT:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - crafterslink_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/admin/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: crafterslink-frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api/v1
+    depends_on:
+      - backend
+    networks:
+      - crafterslink_net
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres_data:
+    driver: local
+  backend_media:
+    driver: local
+  backend_static:
+    driver: local
+  backend_logs:
+    driver: local
+
+networks:
+  crafterslink_net:
+    driver: bridge
+
+# Made with Bob

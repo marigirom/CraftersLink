@@ -16,11 +16,24 @@ class IBMCloudStorageService:
     
     def __init__(self):
         self.config = settings.IBM_COS_CONFIG
-        self.client = self._get_client()
+        self.client = None
         self.bucket_name = self.config['bucket_name']
+        self._is_configured = self._check_configuration()
+        
+        # Only initialize client if properly configured
+        if self._is_configured:
+            self.client = self._get_client()
+    
+    def _check_configuration(self):
+        """Check if IBM COS is properly configured."""
+        required_fields = ['endpoint', 'api_key', 'instance_id']
+        return all(self.config.get(field) for field in required_fields)
     
     def _get_client(self):
         """Initialize IBM COS client."""
+        if not self._is_configured:
+            return None
+            
         return ibm_boto3.client(
             's3',
             ibm_api_key_id=self.config['api_key'],
@@ -43,6 +56,9 @@ class IBMCloudStorageService:
         Returns:
             str: URL of uploaded file
         """
+        if not self._is_configured:
+            raise Exception("IBM Cloud Object Storage is not configured. Please set IBM_COS_ENDPOINT, IBM_COS_API_KEY, and IBM_COS_INSTANCE_ID in your environment variables.")
+        
         try:
             # Generate unique filename if not provided
             if not filename:
@@ -92,6 +108,9 @@ class IBMCloudStorageService:
         Returns:
             str: URL of uploaded image
         """
+        if not self._is_configured:
+            raise Exception("IBM Cloud Object Storage is not configured. Please set IBM_COS_ENDPOINT, IBM_COS_API_KEY, and IBM_COS_INSTANCE_ID in your environment variables.")
+        
         try:
             # Open and optimize image
             img = Image.open(image_file)
@@ -141,6 +160,9 @@ class IBMCloudStorageService:
         Args:
             url: Full URL of file to delete
         """
+        if not self._is_configured:
+            raise Exception("IBM Cloud Object Storage is not configured.")
+        
         try:
             # Extract key from URL
             key = self._extract_key_from_url(url)
@@ -165,6 +187,9 @@ class IBMCloudStorageService:
         Returns:
             str: Pre-signed URL
         """
+        if not self._is_configured:
+            raise Exception("IBM Cloud Object Storage is not configured.")
+        
         try:
             url = self.client.generate_presigned_url(
                 'get_object',
@@ -191,6 +216,9 @@ class IBMCloudStorageService:
         Returns:
             str: URL of uploaded PDF
         """
+        if not self._is_configured:
+            raise Exception("IBM Cloud Object Storage is not configured.")
+        
         try:
             key = f"{folder}/{filename}"
             
@@ -223,7 +251,23 @@ class IBMCloudStorageService:
             return url.replace(f"{self.config['endpoint']}/{self.bucket_name}/", '')
 
 
-# Singleton instance
-storage_service = IBMCloudStorageService()
+# Lazy-loaded singleton instance
+_storage_service = None
+
+def get_storage_service():
+    """Get or create the storage service singleton."""
+    global _storage_service
+    if _storage_service is None:
+        _storage_service = IBMCloudStorageService()
+    return _storage_service
+
+# For backward compatibility
+storage_service = None
+
+def __getattr__(name):
+    """Lazy load storage_service when accessed."""
+    if name == 'storage_service':
+        return get_storage_service()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 # Made with Bob
