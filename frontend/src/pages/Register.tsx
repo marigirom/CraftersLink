@@ -107,18 +107,63 @@ const Register: React.FC = () => {
             navigate('/catalogue');
           }
         }, 1500);
+      } else {
+        // Handle unsuccessful response
+        setErrors({
+          general: response.message || 'Registration failed. Please try again.'
+        });
       }
     } catch (error: any) {
       console.error('Registration error:', error);
+      console.error('Error details:', error.response?.data);
       
-      // Handle specific error messages
-      if (error.message.includes('email')) {
-        setErrors({ email: error.message });
-      } else if (error.message.includes('username')) {
-        setErrors({ username: error.message });
+      // Extract error message from different possible formats
+      let errorMessage = 'Registration failed. Please try again.';
+      const newErrors: Record<string, string> = {};
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        
+        // Check for field-specific errors
+        if (data.errors) {
+          // Handle validation errors for specific fields
+          Object.keys(data.errors).forEach(field => {
+            const fieldError = data.errors[field];
+            newErrors[field] = Array.isArray(fieldError) ? fieldError[0] : fieldError;
+          });
+        }
+        
+        // Check for general error messages
+        if (data.message) {
+          errorMessage = data.message;
+          
+          // Try to assign to specific field if message mentions it
+          if (errorMessage.toLowerCase().includes('email')) {
+            newErrors.email = errorMessage;
+          } else if (errorMessage.toLowerCase().includes('username')) {
+            newErrors.username = errorMessage;
+          } else {
+            newErrors.general = errorMessage;
+          }
+        } else if (data.detail) {
+          newErrors.general = data.detail;
+        } else if (Object.keys(newErrors).length === 0) {
+          newErrors.general = errorMessage;
+        }
+      } else if (error.message) {
+        // Handle specific error messages from error.message
+        if (error.message.toLowerCase().includes('email')) {
+          newErrors.email = error.message;
+        } else if (error.message.toLowerCase().includes('username')) {
+          newErrors.username = error.message;
+        } else {
+          newErrors.general = error.message;
+        }
       } else {
-        setErrors({ general: error.message || 'Registration failed. Please try again.' });
+        newErrors.general = errorMessage;
       }
+      
+      setErrors(newErrors);
     } finally {
       setIsLoading(false);
     }

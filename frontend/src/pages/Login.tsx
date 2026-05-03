@@ -66,12 +66,27 @@ const Login: React.FC = () => {
         } else {
           navigate('/catalogue');
         }
+      } else {
+        // Handle unsuccessful response
+        setErrors({
+          general: response.message || 'Login failed. Please try again.'
+        });
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      setErrors({ 
-        general: error.message || 'Invalid email or password. Please try again.' 
-      });
+      console.error('Error details:', error.response?.data);
+      
+      // Extract error message from different possible formats
+      let errorMessage = 'Invalid email or password. Please try again.';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        errorMessage = data.message || data.detail || data.errors?.detail || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setErrors({ general: errorMessage });
     } finally {
       setIsLoading(false);
     }

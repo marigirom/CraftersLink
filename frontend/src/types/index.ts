@@ -20,14 +20,24 @@ export interface ArtisanProfile {
   user: User;
   business_name: string;
   bio: string;
-  specialization: string;
-  location: string;
+  county: string;
+  county_display?: string;
+  town: string;
+  craft_specialty: string;
+  craft_specialty_display?: string;
   years_of_experience: number;
-  portfolio_url?: string;
-  rating: number;
+  workshop_address?: string;
+  business_registration?: string;
+  portfolio_images: string[];
+  average_rating: number;
   total_commissions: number;
-  verified: boolean;
   created_at: string;
+  updated_at: string;
+  // Computed/helper fields for backward compatibility
+  specialization?: string; // Maps to craft_specialty
+  location?: string; // Maps to county + town
+  rating?: number; // Maps to average_rating
+  verified?: boolean; // Derived from business_registration
 }
 
 // Product Types
