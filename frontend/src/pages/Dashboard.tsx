@@ -5,17 +5,32 @@ import { useApi } from '../hooks/useApi';
 import { Commission, Invoice, PaginatedResponse } from '../types';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   
+  // Only fetch data if user is authenticated
   const { data: commissionsData, loading: commissionsLoading } = useApi<PaginatedResponse<Commission>>(
-    '/commissions/'
+    '/commissions/',
+    { immediate: isAuthenticated }
   );
   const { data: invoicesData, loading: invoicesLoading } = useApi<PaginatedResponse<Invoice>>(
-    '/invoices/'
+    '/invoices/',
+    { immediate: isAuthenticated }
   );
 
   const commissions = commissionsData?.results || [];
   const invoices = invoicesData?.results || [];
+
+  // Show loading state while checking authentication
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {

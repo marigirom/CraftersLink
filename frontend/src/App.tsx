@@ -5,6 +5,9 @@ import './index.css';
 // Context
 import { AuthProvider } from './context/AuthContext';
 
+// Components
+import ProtectedRoute from './components/ProtectedRoute';
+
 // Pages
 import Home from './pages/Home';
 import ArtisanCatalogue from './pages/ArtisanCatalogue';
@@ -33,14 +36,58 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/catalogue" element={<ArtisanCatalogue />} />
                 <Route path="/products/:id" element={<ProductDetail />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
                 
-                {/* Protected routes */}
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/commission/new" element={<CommissionFlow />} />
-                <Route path="/commissions/:id" element={<CommissionFlow />} />
-                <Route path="/invoices/:id" element={<InvoiceView />} />
+                {/* Auth routes - redirect if already logged in */}
+                <Route
+                  path="/login"
+                  element={
+                    <ProtectedRoute requireAuth={false}>
+                      <Login />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/register"
+                  element={
+                    <ProtectedRoute requireAuth={false}>
+                      <Register />
+                    </ProtectedRoute>
+                  }
+                />
+                
+                {/* Protected routes - require authentication */}
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/commission/new"
+                  element={
+                    <ProtectedRoute>
+                      <CommissionFlow />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/commissions/:id"
+                  element={
+                    <ProtectedRoute>
+                      <CommissionFlow />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/invoices/:id"
+                  element={
+                    <ProtectedRoute>
+                      <InvoiceView />
+                    </ProtectedRoute>
+                  }
+                />
                 
                 {/* 404 */}
                 <Route path="*" element={<NotFound />} />
