@@ -44,7 +44,7 @@ const Dashboard: React.FC = () => {
             Welcome back, {user?.first_name}!
           </h1>
           <p className="text-gray-600">
-            {user?.role === 'designer'
+            {user?.role === 'DESIGNER'
               ? 'Manage your commissions and track project progress'
               : 'View your active projects and invoices'}
           </p>
@@ -123,7 +123,7 @@ const Dashboard: React.FC = () => {
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Recent Commissions</h2>
-                {user?.role === 'designer' && (
+                {user?.role === 'DESIGNER' && (
                   <Link
                     to="/commission/new"
                     className="text-sm font-medium text-amber-600 hover:text-amber-700"
@@ -158,7 +158,7 @@ const Dashboard: React.FC = () => {
                       </p>
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-500">
-                          {user?.role === 'designer'
+                          {user?.role === 'DESIGNER'
                             ? `Artisan: ${commission.artisan.business_name}`
                             : `Designer: ${commission.designer.first_name} ${commission.designer.last_name}`}
                         </span>
@@ -193,7 +193,7 @@ const Dashboard: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <p className="mt-2 text-sm text-gray-600">No commissions yet</p>
-                  {user?.role === 'designer' && (
+                  {user?.role === 'DESIGNER' && (
                     <Link
                       to="/commission/new"
                       className="mt-4 inline-block px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"

@@ -1,12 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, AuthResponse, LoginCredentials, RegisterData } from '../types';
-import api from '../services/api';
+import authService, { User, AuthTokens } from '../services/authService';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  login: (user: User, tokens: AuthTokens) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -19,43 +17,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        try {
-          const response = await api.get('/auth/me/');
-          setUser(response.data);
-        } catch (error) {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
+      try {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          const userData = await authService.fetchCurrentUser();
+          setUser(userData);
         }
+      } catch (error) {
+        console.error('[AuthContext] Failed to fetch user:', error);
+        // Clear invalid tokens
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initAuth();
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
-    const response = await api.post('/auth/login/', credentials);
-    const { user: userData, tokens } = response.data.data;
-    
+  const login = (userData: User, tokens: AuthTokens) => {
+    // Store tokens and user data
     localStorage.setItem('access_token', tokens.access);
     localStorage.setItem('refresh_token', tokens.refresh);
-    setUser(userData);
-  };
-
-  const register = async (data: RegisterData) => {
-    const response = await api.post('/auth/register/', data);
-    const { user: userData, tokens } = response.data.data;
-    
-    localStorage.setItem('access_token', tokens.access);
-    localStorage.setItem('refresh_token', tokens.refresh);
+    localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    authService.logout();
     setUser(null);
   };
 
@@ -65,12 +56,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         loading,
         login,
-        register,
         logout,
         isAuthenticated: !!user,
       }}
     >
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

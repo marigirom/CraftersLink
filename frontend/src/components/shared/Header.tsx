@@ -40,7 +40,7 @@ const Header: React.FC = () => {
                 >
                   Dashboard
                 </Link>
-                {user?.role === 'designer' && (
+                {user?.role === 'DESIGNER' && (
                   <Link
                     to="/commission/new"
                     className="text-gray-700 hover:text-amber-600 transition-colors font-medium"
@@ -153,7 +153,7 @@ const Header: React.FC = () => {
                   >
                     Dashboard
                   </Link>
-                  {user?.role === 'designer' && (
+                  {user?.role === 'DESIGNER' && (
                     <Link
                       to="/commission/new"
                       className="text-gray-700 hover:text-amber-600 transition-colors font-medium"
