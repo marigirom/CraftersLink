@@ -13,19 +13,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAuth = true,
   redirectTo = '/login',
 }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const location = useLocation();
 
-  // Show loading spinner while checking auth state
+  // Don't show loading spinner, just wait
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   // Redirect to login if auth is required but user is not authenticated
@@ -33,9 +26,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  // Redirect to home if user is authenticated but trying to access auth pages
+  // Redirect to appropriate page if user is authenticated but trying to access auth pages
   if (!requireAuth && isAuthenticated) {
-    return <Navigate to="/" replace />;
+    // Redirect based on user role
+    if (user?.role === 'ARTISAN') {
+      return <Navigate to="/dashboard" replace />;
+    } else {
+      return <Navigate to="/catalogue" replace />;
+    }
   }
 
   return <>{children}</>;

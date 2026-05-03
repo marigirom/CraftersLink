@@ -20,15 +20,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const token = localStorage.getItem('access_token');
         if (token) {
-          const userData = await authService.fetchCurrentUser();
-          setUser(userData);
+          // Try to get user from localStorage first
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              setUser(JSON.parse(storedUser));
+            } catch (e) {
+              console.error('[AuthContext] Failed to parse stored user:', e);
+            }
+          }
+          
+          // Then fetch fresh data from API in the background
+          try {
+            const userData = await authService.fetchCurrentUser();
+            setUser(userData);
+          } catch (error) {
+            console.error('[AuthContext] Failed to fetch user from API:', error);
+            // If API fetch fails but we have stored user, keep using it
+            if (!storedUser) {
+              // Only clear tokens if we don't have any user data
+              localStorage.removeItem('access_token');
+              localStorage.removeItem('refresh_token');
+              localStorage.removeItem('user');
+              setUser(null);
+            }
+          }
         }
       } catch (error) {
-        console.error('[AuthContext] Failed to fetch user:', error);
-        // Clear invalid tokens
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
+        console.error('[AuthContext] Init auth error:', error);
       } finally {
         setLoading(false);
       }
@@ -60,7 +79,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!user,
       }}
     >
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

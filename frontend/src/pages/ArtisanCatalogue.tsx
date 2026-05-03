@@ -8,19 +8,19 @@ const ArtisanCatalogue: React.FC = () => {
   const [selectedSpecialization, setSelectedSpecialization] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   
-  const { data, loading, error } = useApi<PaginatedResponse<ArtisanProfile>>('/artisans/');
+  const { data, loading, error } = useApi<PaginatedResponse<ArtisanProfile>>('/artisans/', { immediate: true });
 
   const specializations = ['Woodworking', 'Metalwork', 'Textiles', 'Ceramics', 'Glasswork', 'Leatherwork'];
   const locations = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret'];
 
-  const filteredArtisans = data?.results.filter((artisan) => {
+  const filteredArtisans = data?.results?.filter((artisan) => {
     const matchesSearch = artisan.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          artisan.bio.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSpecialization = !selectedSpecialization || artisan.specialization === selectedSpecialization;
     const matchesLocation = !selectedLocation || artisan.location === selectedLocation;
     
     return matchesSearch && matchesSpecialization && matchesLocation;
-  });
+  }) || [];
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">

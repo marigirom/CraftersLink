@@ -20,18 +20,6 @@ const Dashboard: React.FC = () => {
   const commissions = commissionsData?.results || [];
   const invoices = invoicesData?.results || [];
 
-  // Show loading state while checking authentication
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
