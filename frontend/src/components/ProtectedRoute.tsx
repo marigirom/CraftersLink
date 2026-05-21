@@ -5,37 +5,68 @@ import { useAuth } from '../context/AuthContext';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAuth?: boolean;
-  redirectTo?: string;
+  allowedRoles?: ('ARTISAN' | 'INTERIOR_DESIGNER' | 'DESIGNER')[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requireAuth = true,
-  redirectTo = '/login',
+  allowedRoles,
 }) => {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
-  // Don't show loading spinner, just wait
+  // Show loading spinner while checking authentication
   if (loading) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
-  // Redirect to login if auth is required but user is not authenticated
+  // LEVEL 1: Authentication Check
+  // If route requires NO auth (login/register) but user IS authenticated
+  if (!requireAuth && isAuthenticated && user) {
+    // Redirect to appropriate dashboard based on role
+    if (user.role === 'ARTISAN') {
+      return <Navigate to="/artisan/dashboard" replace />;
+    } else if (user.role === 'INTERIOR_DESIGNER' || user.role === 'DESIGNER') {
+      return <Navigate to="/designer/dashboard" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // If route requires auth but user is NOT authenticated
   if (requireAuth && !isAuthenticated) {
-    return <Navigate to={redirectTo} state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Redirect to appropriate page if user is authenticated but trying to access auth pages
-  if (!requireAuth && isAuthenticated) {
-    // Redirect based on user role
-    if (user?.role === 'ARTISAN') {
+  // LEVEL 2: Role-Based Access Control
+  if (allowedRoles && user) {
+    // Normalize role (handle both DESIGNER and INTERIOR_DESIGNER)
+    const userRole = user.role === 'INTERIOR_DESIGNER' ? 'INTERIOR_DESIGNER' : user.role;
+    
+    // Check if user's role is in allowed roles (also check for DESIGNER variant)
+    const hasAccess = allowedRoles.includes(userRole as any) || 
+                     (userRole === 'INTERIOR_DESIGNER' && allowedRoles.includes('DESIGNER' as any));
+    
+    if (!hasAccess) {
+      // Redirect to correct dashboard based on user's actual role
+      if (user.role === 'ARTISAN') {
+        return <Navigate to="/artisan/dashboard" replace />;
+      } else if (user.role === 'INTERIOR_DESIGNER' || user.role === 'DESIGNER') {
+        return <Navigate to="/designer/dashboard" replace />;
+      }
+      // Fallback
       return <Navigate to="/dashboard" replace />;
-    } else {
-      return <Navigate to="/catalogue" replace />;
     }
   }
 
+  // All checks passed, render the protected content
   return <>{children}</>;
 };
 

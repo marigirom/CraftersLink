@@ -94,19 +94,12 @@ const Register: React.FC = () => {
       const response = await authService.register(formData);
       
       if (response.success) {
-        setSuccessMessage('Registration successful! Redirecting...');
+        setSuccessMessage('Account created successfully! Redirecting to login...');
         
-        // Login the user with the returned tokens
-        login(response.data.user, response.data.tokens);
-        
-        // Redirect based on role
+        // Redirect to login page with success flag
         setTimeout(() => {
-          if (response.data.user.role === 'ARTISAN') {
-            navigate('/dashboard');
-          } else {
-            navigate('/catalogue');
-          }
-        }, 1500);
+          navigate('/login?registered=true');
+        }, 2000);
       } else {
         // Handle unsuccessful response
         setErrors({

@@ -1,16 +1,45 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const Header: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  // Helper to check if user is artisan
+  const isArtisan = user?.role === 'ARTISAN';
+  // Helper to check if user is designer (handle both DESIGNER and INTERIOR_DESIGNER)
+  const isDesigner = user?.role === 'DESIGNER' || user?.role === 'INTERIOR_DESIGNER';
+
+  // Helper to check if a path is active
+  const isActivePath = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
+
+  // Artisan navigation items
+  const artisanNavItems = [
+    { label: 'Dashboard', path: '/artisan/dashboard' },
+    { label: 'My Catalogue', path: '/artisan/catalogue' },
+    { label: 'Profile', path: '/artisan/profile' },
+  ];
+
+  // Designer navigation items
+  const designerNavItems = [
+    { label: 'Dashboard', path: '/designer/dashboard' },
+    { label: 'Discover Artisans', path: '/designer/catalogue' },
+    { label: 'My Commissions', path: '/designer/commissions' },
+    { label: 'Profile', path: '/designer/profile' },
+  ];
+
+  // Get navigation items based on role
+  const navItems = isArtisan ? artisanNavItems : isDesigner ? designerNavItems : [];
 
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
@@ -25,34 +54,23 @@ const Header: React.FC = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link
-              to="/catalogue"
-              className="text-gray-700 hover:text-amber-600 transition-colors font-medium"
-            >
-              Artisan Catalogue
-            </Link>
-            {isAuthenticated && (
-              <>
-                <Link
-                  to="/dashboard"
-                  className="text-gray-700 hover:text-amber-600 transition-colors font-medium"
-                >
-                  Dashboard
-                </Link>
-                {user?.role === 'DESIGNER' && (
-                  <Link
-                    to="/commission/new"
-                    className="text-gray-700 hover:text-amber-600 transition-colors font-medium"
-                  >
-                    New Commission
-                  </Link>
-                )}
-              </>
-            )}
+          <div className="hidden md:flex items-center space-x-1">
+            {isAuthenticated && navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActivePath(item.path)
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-amber-600'
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
 
-          {/* Auth Buttons */}
+          {/* Auth Buttons / User Menu */}
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <>
@@ -61,17 +79,19 @@ const Header: React.FC = () => {
                     <p className="text-sm font-medium text-gray-900">
                       {user?.first_name} {user?.last_name}
                     </p>
-                    <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                    <p className="text-xs text-gray-500 capitalize">
+                      {isArtisan ? 'Artisan' : isDesigner ? 'Designer' : user?.role}
+                    </p>
                   </div>
                   {user?.profile_image ? (
                     <img
                       src={user.profile_image}
                       alt="Profile"
-                      className="w-10 h-10 rounded-full object-cover"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-amber-200"
                     />
                   ) : (
-                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                      <span className="text-amber-800 font-semibold">
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center border-2 border-amber-200">
+                      <span className="text-amber-800 font-semibold text-sm">
                         {user?.first_name?.[0]}
                         {user?.last_name?.[0]}
                       </span>
@@ -95,7 +115,7 @@ const Header: React.FC = () => {
                 </Link>
                 <Link
                   to="/register"
-                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors shadow-sm"
                 >
                   Sign Up
                 </Link>
@@ -136,37 +156,32 @@ const Header: React.FC = () => {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
-            <div className="flex flex-col space-y-4">
-              <Link
-                to="/catalogue"
-                className="text-gray-700 hover:text-amber-600 transition-colors font-medium"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Artisan Catalogue
-              </Link>
+            <div className="flex flex-col space-y-2">
               {isAuthenticated ? (
                 <>
-                  <Link
-                    to="/dashboard"
-                    className="text-gray-700 hover:text-amber-600 transition-colors font-medium"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
-                  {user?.role === 'DESIGNER' && (
+                  {navItems.map((item) => (
                     <Link
-                      to="/commission/new"
-                      className="text-gray-700 hover:text-amber-600 transition-colors font-medium"
+                      key={item.path}
+                      to={item.path}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isActivePath(item.path)
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      New Commission
+                      {item.label}
                     </Link>
-                  )}
-                  <div className="pt-4 border-t border-gray-200">
-                    <p className="text-sm font-medium text-gray-900 mb-1">
-                      {user?.first_name} {user?.last_name}
-                    </p>
-                    <p className="text-xs text-gray-500 capitalize mb-3">{user?.role}</p>
+                  ))}
+                  <div className="pt-4 border-t border-gray-200 mt-2">
+                    <div className="px-4 mb-3">
+                      <p className="text-sm font-medium text-gray-900 mb-1">
+                        {user?.first_name} {user?.last_name}
+                      </p>
+                      <p className="text-xs text-gray-500 capitalize">
+                        {isArtisan ? 'Artisan' : isDesigner ? 'Designer' : user?.role}
+                      </p>
+                    </div>
                     <button
                       onClick={() => {
                         handleLogout();
@@ -189,7 +204,7 @@ const Header: React.FC = () => {
                   </Link>
                   <Link
                     to="/register"
-                    className="px-4 py-2 text-sm font-medium text-center text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-center text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors shadow-sm"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Sign Up

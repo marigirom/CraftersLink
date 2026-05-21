@@ -3,9 +3,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* IBM Carbon Design System styles */
-@import '@carbon/react/scss/styles.scss';
-
 /* Custom global styles */
 :root {
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

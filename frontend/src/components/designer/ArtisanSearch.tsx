@@ -234,7 +234,7 @@ const ArtisanSearch: React.FC<ArtisanSearchProps> = ({
 
                     {!onSelectArtisan && (
                       <Link
-                        to={`/artisan/${artisan?.id}`}
+                        to={`/dashboard/designer/catalogue/${artisan?.id}`}
                         className="mt-4 block w-full text-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
                       >
                         View Profile

@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 const CommissionFlow: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   
   const [formData, setFormData] = useState({
-    artisan_id: '',
+    artisan_id: searchParams.get('artisan') || '',
     title: '',
     description: '',
     budget: '',
@@ -18,6 +20,13 @@ const CommissionFlow: React.FC = () => {
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const artisanParam = searchParams.get('artisan');
+    if (artisanParam) {
+      setFormData(prev => ({ ...prev, artisan_id: artisanParam }));
+    }
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -30,11 +39,14 @@ const CommissionFlow: React.FC = () => {
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.title) {
-      newErrors.title = 'Title is required';
+    if (!formData.artisan_id) {
+      newErrors.artisan_id = 'Artisan selection is required';
     }
-    if (!formData.description) {
-      newErrors.description = 'Description is required';
+    if (!formData.title || formData.title.trim().length < 5) {
+      newErrors.title = 'Title is required (minimum 5 characters)';
+    }
+    if (!formData.description || formData.description.trim().length < 100) {
+      newErrors.description = 'Description is required (minimum 100 characters)';
     }
     if (!formData.budget || parseFloat(formData.budget) <= 0) {
       newErrors.budget = 'Valid budget is required';
@@ -42,8 +54,12 @@ const CommissionFlow: React.FC = () => {
     if (!formData.deadline) {
       newErrors.deadline = 'Deadline is required';
     }
-    if (!formData.requirements) {
-      newErrors.requirements = 'Requirements are required';
+    // Validate deadline is in future
+    const deadlineDate = new Date(formData.deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (deadlineDate <= today) {
+      newErrors.deadline = 'Deadline must be in the future';
     }
 
     setErrors(newErrors);
@@ -58,19 +74,52 @@ const CommissionFlow: React.FC = () => {
     }
 
     setIsLoading(true);
+    setErrors({});
     
     try {
-      // TODO: Implement API call to create commission
-      console.log('Creating commission:', formData);
+      const payload = {
+        artisan: parseInt(formData.artisan_id), // ArtisanProfile ID
+        title: formData.title.trim(),
+        custom_brief: formData.description.trim() + (formData.requirements ? '\n\nRequirements:\n' + formData.requirements : ''),
+        budget_kes: parseFloat(formData.budget),
+        requested_delivery_date: formData.deadline,
+        notes: formData.requirements || '',
+        attachment_urls: []
+      };
+
+      console.log('Creating commission:', payload);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await api.post('/commissions/', payload);
       
-      // Navigate to dashboard after successful creation
-      navigate('/dashboard');
-    } catch (error) {
+      if (response.data.success) {
+        // Navigate to designer dashboard after successful creation
+        navigate('/designer/dashboard', {
+          state: { message: 'Commission request sent successfully!' }
+        });
+      }
+    } catch (error: any) {
       console.error('Error creating commission:', error);
-      setErrors({ general: 'Failed to create commission. Please try again.' });
+      console.error('Error response:', error.response?.data);
+      
+      const errorData = error.response?.data;
+      if (errorData) {
+        if (typeof errorData === 'object' && !errorData.message) {
+          // Field-specific errors
+          const fieldErrors: Record<string, string> = {};
+          Object.keys(errorData).forEach(key => {
+            if (Array.isArray(errorData[key])) {
+              fieldErrors[key] = errorData[key][0];
+            } else {
+              fieldErrors[key] = String(errorData[key]);
+            }
+          });
+          setErrors(fieldErrors);
+        } else {
+          setErrors({ general: errorData.message || 'Failed to create commission. Please try again.' });
+        }
+      } else {
+        setErrors({ general: 'Failed to create commission. Please try again.' });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -123,20 +172,24 @@ const CommissionFlow: React.FC = () => {
             {/* Description */}
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                Description *
+                Project Description *
+                <span className="text-gray-500 font-normal ml-2">(minimum 100 characters)</span>
               </label>
               <textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                rows={4}
+                rows={6}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent ${
                   errors.description ? 'border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="Describe your project in detail..."
+                placeholder="Describe your project in detail... Include materials, style preferences, and any specific requirements."
                 required
               />
+              <p className="mt-1 text-sm text-gray-500">
+                {formData.description.length} / 100 characters
+              </p>
               {errors.description && (
                 <p className="mt-1 text-sm text-red-600">{errors.description}</p>
               )}
@@ -192,7 +245,7 @@ const CommissionFlow: React.FC = () => {
             {/* Requirements */}
             <div>
               <label htmlFor="requirements" className="block text-sm font-medium text-gray-700 mb-2">
-                Specific Requirements *
+                Additional Notes (Optional)
               </label>
               <textarea
                 id="requirements"
@@ -203,8 +256,7 @@ const CommissionFlow: React.FC = () => {
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent ${
                   errors.requirements ? 'border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="List any specific materials, dimensions, or other requirements..."
-                required
+                placeholder="Any additional notes, special requests, or clarifications..."
               />
               {errors.requirements && (
                 <p className="mt-1 text-sm text-red-600">{errors.requirements}</p>
