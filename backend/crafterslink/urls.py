@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/v1/artisans/', include('apps.artisans.urls')),
     path('api/v1/commissions/', include('apps.commissions.urls')),
     path('api/v1/invoices/', include('apps.invoices.urls')),
+    path('api/v1/', include('apps.common.urls')),  # Common endpoints (saved, search, notifications)
 ]
 
 # Serve media files in development

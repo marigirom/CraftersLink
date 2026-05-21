@@ -28,10 +28,21 @@ COPY . /app/
 # Create necessary directories
 RUN mkdir -p /app/media /app/logs /app/staticfiles
 
+# Copy and set permissions for entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Expose port
 EXPOSE 8000
 
-# Run migrations and start server
-CMD ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/admin/ || exit 1
+
+# Set entrypoint
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+# Default command
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
 # Made with Bob

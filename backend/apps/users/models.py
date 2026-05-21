@@ -38,7 +38,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     class UserRole(models.TextChoices):
         ARTISAN = 'ARTISAN', 'Artisan'
-        DESIGNER = 'DESIGNER', 'Interior Designer'
+        INTERIOR_DESIGNER = 'INTERIOR_DESIGNER', 'Interior Designer'
     
     # Basic fields
     username = models.CharField(max_length=150, unique=True)
@@ -48,9 +48,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     # Role and profile
     role = models.CharField(
-        max_length=10,
+        max_length=20,
         choices=UserRole.choices,
-        default=UserRole.DESIGNER
+        default=UserRole.INTERIOR_DESIGNER
     )
     phone_number = models.CharField(max_length=15, blank=True)
     profile_image = models.URLField(blank=True)
@@ -96,5 +96,60 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_designer(self):
         """Check if user is a designer."""
         return self.role == self.UserRole.DESIGNER
+
+
+class DesignerProfile(models.Model):
+    """Interior Designer profile model."""
+    
+    SPECIALISATION_CHOICES = [
+        ('RESIDENTIAL', 'Residential Design'),
+        ('COMMERCIAL', 'Commercial Design'),
+        ('HOSPITALITY', 'Hospitality Design'),
+        ('RETAIL', 'Retail Design'),
+        ('HEALTHCARE', 'Healthcare Design'),
+        ('MIXED', 'Mixed/General'),
+    ]
+    
+    COUNTY_CHOICES = [
+        ('NAIROBI', 'Nairobi'),
+        ('MOMBASA', 'Mombasa'),
+        ('KISUMU', 'Kisumu'),
+        ('NAKURU', 'Nakuru'),
+        ('KIAMBU', 'Kiambu'),
+        ('KISII', 'Kisii'),
+        ('LAMU', 'Lamu'),
+        ('KAJIADO', 'Kajiado'),
+        ('MACHAKOS', 'Machakos'),
+        ('KILIFI', 'Kilifi'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='designer_profile')
+    full_name = models.CharField(max_length=200, blank=True)
+    phone_number = models.CharField(max_length=15, blank=True)
+    company_name = models.CharField(max_length=200, blank=True)
+    location = models.CharField(max_length=50, choices=COUNTY_CHOICES, blank=True)
+    specialisation = models.CharField(max_length=20, choices=SPECIALISATION_CHOICES, default='MIXED')
+    bio = models.TextField(max_length=1000, blank=True)
+    years_of_experience = models.PositiveIntegerField(default=0)
+    profile_image = models.URLField(blank=True)
+    portfolio_images = models.JSONField(default=list)
+    projects_completed = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'designer_profiles'
+        indexes = [
+            models.Index(fields=['specialisation']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.get_full_name()} - Designer"
+    
+    def increment_project_count(self):
+        """Increment projects completed counter."""
+        self.projects_completed += 1
+        self.save(update_fields=['projects_completed'])
+
 
 # Made with Bob

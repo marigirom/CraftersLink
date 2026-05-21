@@ -93,6 +93,12 @@ DATABASES = {
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
 
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'apps.users.backends.EmailBackend',  # Custom email authentication
+    'django.contrib.auth.backends.ModelBackend',  # Fallback to default
+]
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
@@ -131,10 +137,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
@@ -186,10 +192,11 @@ SIMPLE_JWT = {
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:3000'
+    default='http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:3000,http://frontend:5173,http://crafterslink-frontend:5173'
 ).split(',')
 
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
 
 # Additional CORS settings for better compatibility
 CORS_ALLOW_HEADERS = [

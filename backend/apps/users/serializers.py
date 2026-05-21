@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
+from .models import User, DesignerProfile
 import re
 
 
@@ -109,6 +109,48 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
                 "Phone number must be in Kenyan format (+254XXXXXXXXX or 07XXXXXXXX)"
             )
         return value
+
+
+class DesignerProfileSerializer(serializers.ModelSerializer):
+    """Serializer for DesignerProfile model."""
+    user = UserSerializer(read_only=True)
+    specialisation_display = serializers.CharField(source='get_specialisation_display', read_only=True)
+    location_display = serializers.CharField(source='get_location_display', read_only=True)
+    
+    class Meta:
+        model = DesignerProfile
+        fields = [
+            'id', 'user', 'full_name', 'phone_number', 'company_name', 'location',
+            'location_display', 'specialisation', 'specialisation_display',
+            'bio', 'years_of_experience', 'profile_image', 'portfolio_images',
+            'projects_completed', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'user', 'projects_completed', 'created_at', 'updated_at']
+
+
+class DesignerProfileCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating DesignerProfile."""
+    
+    class Meta:
+        model = DesignerProfile
+        fields = [
+            'full_name', 'phone_number', 'company_name', 'location', 'specialisation',
+            'bio', 'years_of_experience', 'profile_image', 'portfolio_images'
+        ]
+    
+    def create(self, validated_data):
+        """Create designer profile with user from context or save() call."""
+        from .models import DesignerProfile
+        # User is passed via save(user=...) in the view, not from validated_data
+        return DesignerProfile.objects.create(**validated_data)
+    
+    def validate(self, attrs):
+        """Validate that user doesn't already have a profile."""
+        from .models import DesignerProfile
+        user = self.context['request'].user
+        if self.instance is None and hasattr(user, 'designer_profile'):
+            raise serializers.ValidationError("Designer profile already exists for this user")
+        return attrs
 
 
 # Made with Bob

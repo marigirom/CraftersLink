@@ -6,13 +6,16 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from django.contrib.auth import authenticate
 from django.db import IntegrityError
 import logging
-from .models import User
+from .models import User, DesignerProfile
 from .serializers import (
     UserSerializer,
     UserRegistrationSerializer,
     UserLoginSerializer,
-    UserProfileUpdateSerializer
+    UserProfileUpdateSerializer,
+    DesignerProfileSerializer,
+    DesignerProfileCreateSerializer
 )
+from apps.common.permissions import IsDesigner
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +138,100 @@ class CurrentUserView(generics.RetrieveUpdateAPIView):
             'success': True,
             'data': UserSerializer(instance).data,
             'message': 'Profile updated successfully'
+        })
+
+
+class DesignerProfileView(generics.RetrieveUpdateAPIView):
+    """Get or update designer profile for current user."""
+    serializer_class = DesignerProfileSerializer
+    permission_classes = [permissions.IsAuthenticated, IsDesigner]
+    http_method_names = ['get', 'post', 'patch', 'put', 'head', 'options']
+    
+    def get_object(self):
+        """Get or create designer profile for current user."""
+        try:
+            return DesignerProfile.objects.get(user=self.request.user)
+        except DesignerProfile.DoesNotExist:
+            return None
+    
+    def retrieve(self, request, *args, **kwargs):
+        """GET - Return profile or empty structure if doesn't exist"""
+        instance = self.get_object()
+        if not instance:
+            return Response({
+                'success': True,
+                'data': None,
+                'message': 'No profile found. Please create your profile.'
+            }, status=status.HTTP_200_OK)
+        
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'data': serializer.data
+        })
+    
+    def post(self, request, *args, **kwargs):
+        """POST - Create new profile"""
+        if request.user.role != 'INTERIOR_DESIGNER':
+            return Response({
+                'success': False,
+                'message': 'Only interior designer users can create designer profiles'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        if self.get_object():
+            return Response({
+                'success': False,
+                'message': 'Profile already exists. Use PATCH to update.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = DesignerProfileCreateSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        profile = serializer.save(user=request.user)
+        
+        return Response({
+            'success': True,
+            'data': DesignerProfileSerializer(profile).data,
+            'message': 'Profile created successfully'
+        }, status=status.HTTP_201_CREATED)
+    
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            return DesignerProfileCreateSerializer
+        return DesignerProfileSerializer
+    
+    def update(self, request, *args, **kwargs):
+        """PATCH/PUT - Update existing profile"""
+        instance = self.get_object()
+        if not instance:
+            return Response({
+                'success': False,
+                'message': 'Profile not found. Use POST to create.'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        partial = kwargs.pop('partial', False)
+        serializer = DesignerProfileCreateSerializer(instance, data=request.data, partial=partial, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response({
+            'success': True,
+            'data': DesignerProfileSerializer(instance).data,
+            'message': 'Profile updated successfully'
+        })
+
+
+class DesignerProfileDetailView(generics.RetrieveAPIView):
+    """Get designer profile by ID (public view)."""
+    queryset = DesignerProfile.objects.select_related('user').all()
+    serializer_class = DesignerProfileSerializer
+    permission_classes = [permissions.AllowAny]
+    
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response({
+            'success': True,
+            'data': serializer.data
         })
 
 
