@@ -51,7 +51,7 @@ const ProductDetail: React.FC = () => {
       return;
     }
     
-    if (user?.role !== 'DESIGNER') {
+    if (user?.role !== 'INTERIOR_DESIGNER') {
       alert('Only designers can request commissions');
       return;
     }

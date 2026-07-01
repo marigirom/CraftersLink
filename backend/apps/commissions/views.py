@@ -33,6 +33,31 @@ class IsDesignerOrArtisan(permissions.BasePermission):
         return False
 
 
+def _create_commission_notification(commission):
+    """
+    Create a Notification record for the artisan when a new commission arrives.
+    Imported lazily to avoid circular imports.
+    """
+    from apps.common.models import Notification
+
+    designer_name = commission.designer.get_full_name() or commission.designer.username
+    if commission.reference_product:
+        item_text = f'about "{commission.reference_product.name}"'
+    else:
+        item_text = 'for a custom commission'
+
+    project_text = f' (Project: {commission.project.name})' if commission.project_id else ''
+
+    Notification.objects.create(
+        user=commission.artisan.user,
+        type='NEW_ORDER',
+        title='New Commission Request',
+        message=f'{designer_name} sent you a commission request {item_text}{project_text}.',
+        reference_id=str(commission.id),
+        reference_type='commission',
+    )
+
+
 class CommissionListView(generics.ListAPIView):
     """List commissions with filtering"""
     serializer_class = CommissionListSerializer
@@ -46,13 +71,13 @@ class CommissionListView(generics.ListAPIView):
     def get_queryset(self):
         """Filter commissions by user role"""
         user = self.request.user
-        if user.role == 'DESIGNER':
+        if user.role == 'INTERIOR_DESIGNER':
             return Commission.objects.filter(designer=user).select_related(
-                'designer', 'artisan__user'
+                'designer', 'artisan__user', 'reference_product', 'project'
             )
         elif user.role == 'ARTISAN':
             return Commission.objects.filter(artisan__user=user).select_related(
-                'designer', 'artisan__user'
+                'designer', 'artisan__user', 'reference_product', 'project'
             )
         return Commission.objects.none()
     
@@ -76,7 +101,7 @@ class CommissionListView(generics.ListAPIView):
 class CommissionDetailView(generics.RetrieveAPIView):
     """Get commission details"""
     queryset = Commission.objects.select_related(
-        'designer', 'artisan__user', 'reference_product'
+        'designer', 'artisan__user', 'reference_product', 'project'
     ).prefetch_related('milestones')
     serializer_class = CommissionSerializer
     permission_classes = [permissions.IsAuthenticated, IsDesignerOrArtisan]
@@ -98,7 +123,7 @@ class CommissionCreateView(generics.CreateAPIView):
     
     def create(self, request, *args, **kwargs):
         # Check if user is designer
-        if request.user.role != 'DESIGNER':
+        if request.user.role != 'INTERIOR_DESIGNER':
             return Response({
                 'success': False,
                 'message': 'Only designers can create commissions'
@@ -108,9 +133,19 @@ class CommissionCreateView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         commission = serializer.save()
         
+        # Notify the artisan about the new commission request
+        try:
+            _create_commission_notification(commission)
+        except Exception:
+            # Notification failure must never abort the commission creation
+            pass
+        
         return Response({
             'success': True,
-            'data': CommissionSerializer(commission).data,
+            'data': CommissionSerializer(
+                commission,
+                context={'request': request}
+            ).data,
             'message': 'Commission created successfully'
         }, status=status.HTTP_201_CREATED)
 
@@ -121,7 +156,7 @@ class CommissionActionView(APIView):
     
     def post(self, request, pk):
         commission = get_object_or_404(
-            Commission.objects.select_related('designer', 'artisan__user'),
+            Commission.objects.select_related('designer', 'artisan__user', 'project'),
             pk=pk
         )
         
@@ -150,6 +185,9 @@ class CommissionActionView(APIView):
                 agreed_date = serializer.validated_data['agreed_delivery_date']
                 commission.accept(agreed_date)
                 message = 'Commission accepted successfully'
+                
+                # Notify designer that their commission was accepted
+                _notify_designer_status_change(commission, 'accepted')
             
             elif action == 'reject':
                 if commission.status != Commission.CommissionStatus.PENDING:
@@ -166,6 +204,9 @@ class CommissionActionView(APIView):
                 
                 commission.reject()
                 message = 'Commission rejected'
+                
+                # Notify designer
+                _notify_designer_status_change(commission, 'rejected')
             
             elif action == 'start_work':
                 if commission.status != Commission.CommissionStatus.ACCEPTED:
@@ -218,7 +259,7 @@ class CommissionActionView(APIView):
             
             return Response({
                 'success': True,
-                'data': CommissionSerializer(commission).data,
+                'data': CommissionSerializer(commission, context={'request': request}).data,
                 'message': message
             })
         
@@ -227,6 +268,28 @@ class CommissionActionView(APIView):
                 'success': False,
                 'message': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+def _notify_designer_status_change(commission, action):
+    """Notify the designer when the artisan changes commission status."""
+    from apps.common.models import Notification
+
+    artisan_name = (
+        commission.artisan.business_name or commission.artisan.user.get_full_name()
+    )
+    action_text = 'accepted' if action == 'accepted' else 'declined'
+
+    try:
+        Notification.objects.create(
+            user=commission.designer,
+            type='ORDER_UPDATE',
+            title=f'Commission {action_text.capitalize()}',
+            message=f'{artisan_name} has {action_text} your commission "{commission.title}".',
+            reference_id=str(commission.id),
+            reference_type='commission',
+        )
+    except Exception:
+        pass
 
 
 class MilestoneListView(generics.ListAPIView):

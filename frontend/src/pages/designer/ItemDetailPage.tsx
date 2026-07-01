@@ -33,7 +33,7 @@ interface Product {
   height_cm?: number;
   weight_kg?: number;
   dimensions: string;
-  price_kes: number;
+  price_kes: number | null;
   status: string;
   status_display: string;
   primary_image: string;
@@ -57,9 +57,21 @@ interface ArtisanMini {
   business_name: string;
   county_display: string;
   town: string;
-  average_rating: number;
+  average_rating: number | null;
   total_commissions: number;
 }
+
+/** Format a KES price value. Returns "Price on request" when null/undefined. */
+const formatPrice = (value: number | null | undefined): string => {
+  if (value == null) return 'Price on request';
+  return `KES ${Number(value).toLocaleString()}`;
+};
+
+/** Format a numeric rating. Returns "N/A" when null/undefined. */
+const formatRating = (value: number | null | undefined): string => {
+  if (value == null) return 'N/A';
+  return Number(value).toFixed(1);
+};
 
 const ItemDetailPage: React.FC = () => {
   const { artisanId, itemId } = useParams<{ artisanId: string; itemId: string }>();
@@ -310,14 +322,14 @@ const ItemDetailPage: React.FC = () => {
 
             <div className="mb-6">
               <p className="text-4xl font-bold text-blue-600 mb-2">
-                KES {product.price_kes.toLocaleString()}
+                {formatPrice(product.price_kes)}
               </p>
               <p className="text-gray-600">{product.views_count} views</p>
             </div>
 
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-2">Description</h3>
-              <p className="text-gray-700 leading-relaxed">{product.description}</p>
+              <p className="text-gray-700 leading-relaxed overflow-y-auto max-h-48">{product.description}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
@@ -395,7 +407,7 @@ const ItemDetailPage: React.FC = () => {
                 <div className="flex items-center gap-3 text-sm">
                   <div className="flex items-center gap-1">
                     <Star size={16} className="text-yellow-500" />
-                    <span>{artisan.average_rating.toFixed(1)}</span>
+                    <span>{formatRating(artisan.average_rating)}</span>
                   </div>
                   <span className="text-gray-500">
                     {artisan.total_commissions} projects

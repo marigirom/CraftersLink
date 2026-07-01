@@ -77,7 +77,7 @@ const Login: React.FC = () => {
         // Redirect based on role to correct dashboard
         if (response.data.user.role === 'ARTISAN') {
           navigate('/artisan/dashboard');
-        } else if (response.data.user.role === 'INTERIOR_DESIGNER' || response.data.user.role === 'DESIGNER') {
+        } else if (response.data.user.role === 'INTERIOR_DESIGNER') {
           navigate('/designer/dashboard');
         } else {
           navigate('/dashboard');

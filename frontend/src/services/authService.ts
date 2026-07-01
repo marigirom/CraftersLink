@@ -7,7 +7,7 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'ARTISAN' | 'DESIGNER';
+  role: 'ARTISAN' | 'INTERIOR_DESIGNER';
   phone_number: string;
   profile_image: string;
   is_verified: boolean;
@@ -28,7 +28,7 @@ export interface RegisterData {
   password_confirm: string;
   first_name: string;
   last_name: string;
-  role: 'ARTISAN' | 'DESIGNER';
+  role: 'ARTISAN' | 'INTERIOR_DESIGNER';
   phone_number?: string;
 }
 
@@ -180,7 +180,7 @@ class AuthService {
    */
   isDesigner(): boolean {
     const user = this.getCurrentUser();
-    return user?.role === 'DESIGNER';
+    return user?.role === 'INTERIOR_DESIGNER';
   }
 
   /**

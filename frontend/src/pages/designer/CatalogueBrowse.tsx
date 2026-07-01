@@ -408,7 +408,7 @@ const CatalogueBrowse: React.FC = () => {
               <ProductCard
                 key={item.id}
                 product={item}
-                role="DESIGNER"
+                role="INTERIOR_DESIGNER"
                 onViewProfile={handleViewProfile}
                 onRequestCommission={handleRequestCommission}
               />

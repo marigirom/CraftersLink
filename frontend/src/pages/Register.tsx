@@ -14,7 +14,7 @@ const Register: React.FC = () => {
     password_confirm: '',
     first_name: '',
     last_name: '',
-    role: 'DESIGNER',
+    role: 'INTERIOR_DESIGNER',
     phone_number: '',
   });
   
@@ -203,7 +203,7 @@ const Register: React.FC = () => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 required
               >
-                <option value="DESIGNER">Interior Designer</option>
+                <option value="INTERIOR_DESIGNER">Interior Designer</option>
                 <option value="ARTISAN">Artisan</option>
               </select>
             </div>

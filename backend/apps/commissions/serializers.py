@@ -54,6 +54,12 @@ class MilestoneUpdateSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class ProjectMinimalSerializer(serializers.Serializer):
+    """Minimal project info embedded in commission responses."""
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
 class CommissionSerializer(serializers.ModelSerializer):
     """Serializer for Commission model"""
     designer = UserSerializer(read_only=True)
@@ -61,12 +67,15 @@ class CommissionSerializer(serializers.ModelSerializer):
     reference_product = ProductListSerializer(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     milestones = MilestoneSerializer(many=True, read_only=True)
+    project = serializers.SerializerMethodField()
+    # Expose budget_kes also as 'budget' for frontend compatibility
+    budget = serializers.DecimalField(source='budget_kes', max_digits=10, decimal_places=2, read_only=True)
     
     class Meta:
         model = Commission
         fields = [
-            'id', 'designer', 'artisan', 'reference_product', 'title',
-            'custom_brief', 'budget_kes', 'requested_delivery_date',
+            'id', 'designer', 'artisan', 'reference_product', 'project', 'title',
+            'custom_brief', 'budget_kes', 'budget', 'requested_delivery_date',
             'agreed_delivery_date', 'actual_delivery_date', 'status',
             'status_display', 'attachment_urls', 'notes', 'milestones',
             'created_at', 'updated_at'
@@ -75,22 +84,29 @@ class CommissionSerializer(serializers.ModelSerializer):
             'id', 'designer', 'agreed_delivery_date', 'actual_delivery_date',
             'status', 'created_at', 'updated_at'
         ]
+    
+    def get_project(self, obj):
+        if obj.project_id is None:
+            return None
+        return {'id': obj.project.id, 'name': obj.project.name}
 
 
 class CommissionCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating commissions"""
+    project_id = serializers.IntegerField(required=False, allow_null=True)
     
     class Meta:
         model = Commission
         fields = [
             'artisan', 'reference_product', 'title', 'custom_brief',
-            'budget_kes', 'requested_delivery_date', 'attachment_urls', 'notes'
+            'budget_kes', 'requested_delivery_date', 'attachment_urls', 'notes',
+            'project_id',
         ]
     
     def validate_custom_brief(self, value):
         """Validate custom brief length"""
-        if len(value) < 100:
-            raise serializers.ValidationError("Custom brief must be at least 100 characters long")
+        if len(value) < 50:
+            raise serializers.ValidationError("Custom brief must be at least 50 characters long")
         return value
     
     def validate_budget_kes(self, value):
@@ -105,10 +121,28 @@ class CommissionCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Requested delivery date must be in the future")
         return value
     
+    def validate(self, attrs):
+        """Validate project ownership if project_id provided."""
+        user = self.context['request'].user
+        project_id = attrs.get('project_id')
+        
+        if project_id is not None:
+            from apps.common.models import Project
+            try:
+                project = Project.objects.get(id=project_id, designer=user)
+                attrs['project'] = project
+            except Project.DoesNotExist:
+                raise serializers.ValidationError({
+                    'project_id': 'Project not found or does not belong to you.'
+                })
+        
+        attrs.pop('project_id', None)
+        return attrs
+    
     def create(self, validated_data):
         """Create commission with designer from context"""
         user = self.context['request'].user
-        if user.role != 'DESIGNER':
+        if user.role != 'INTERIOR_DESIGNER':
             raise serializers.ValidationError("Only designer users can create commissions")
         
         validated_data['designer'] = user
@@ -118,15 +152,31 @@ class CommissionCreateSerializer(serializers.ModelSerializer):
 class CommissionListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for commission list"""
     designer_name = serializers.CharField(source='designer.get_full_name', read_only=True)
-    artisan_name = serializers.CharField(source='artisan.user.get_full_name', read_only=True)
+    artisan_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    # budget alias for frontend compatibility
+    budget = serializers.DecimalField(source='budget_kes', max_digits=10, decimal_places=2, read_only=True)
+    project = serializers.SerializerMethodField()
+    item_title = serializers.SerializerMethodField()
     
     class Meta:
         model = Commission
         fields = [
-            'id', 'designer_name', 'artisan_name', 'title', 'budget_kes',
-            'requested_delivery_date', 'status', 'status_display', 'created_at'
+            'id', 'designer_name', 'artisan_name', 'title', 'budget_kes', 'budget',
+            'requested_delivery_date', 'status', 'status_display', 'project',
+            'item_title', 'created_at'
         ]
+    
+    def get_artisan_name(self, obj):
+        return obj.artisan.business_name or obj.artisan.user.get_full_name()
+    
+    def get_project(self, obj):
+        if obj.project_id is None:
+            return None
+        return {'id': obj.project.id, 'name': obj.project.name}
+    
+    def get_item_title(self, obj):
+        return obj.reference_product.name if obj.reference_product else None
 
 
 class CommissionAcceptSerializer(serializers.Serializer):

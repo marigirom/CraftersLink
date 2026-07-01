@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAuth?: boolean;
-  allowedRoles?: ('ARTISAN' | 'INTERIOR_DESIGNER' | 'DESIGNER')[];
+  allowedRoles?: ('ARTISAN' | 'INTERIOR_DESIGNER')[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -34,7 +34,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Redirect to appropriate dashboard based on role
     if (user.role === 'ARTISAN') {
       return <Navigate to="/artisan/dashboard" replace />;
-    } else if (user.role === 'INTERIOR_DESIGNER' || user.role === 'DESIGNER') {
+    } else if (user.role === 'INTERIOR_DESIGNER') {
       return <Navigate to="/designer/dashboard" replace />;
     }
     return <Navigate to="/dashboard" replace />;
@@ -47,18 +47,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // LEVEL 2: Role-Based Access Control
   if (allowedRoles && user) {
-    // Normalize role (handle both DESIGNER and INTERIOR_DESIGNER)
-    const userRole = user.role === 'INTERIOR_DESIGNER' ? 'INTERIOR_DESIGNER' : user.role;
-    
-    // Check if user's role is in allowed roles (also check for DESIGNER variant)
-    const hasAccess = allowedRoles.includes(userRole as any) || 
-                     (userRole === 'INTERIOR_DESIGNER' && allowedRoles.includes('DESIGNER' as any));
+    const hasAccess = allowedRoles.includes(user.role);
     
     if (!hasAccess) {
       // Redirect to correct dashboard based on user's actual role
       if (user.role === 'ARTISAN') {
         return <Navigate to="/artisan/dashboard" replace />;
-      } else if (user.role === 'INTERIOR_DESIGNER' || user.role === 'DESIGNER') {
+      } else if (user.role === 'INTERIOR_DESIGNER') {
         return <Navigate to="/designer/dashboard" replace />;
       }
       // Fallback

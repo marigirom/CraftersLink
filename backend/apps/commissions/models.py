@@ -19,6 +19,14 @@ class Commission(models.Model):
     designer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='commissions_requested')
     artisan = models.ForeignKey(ArtisanProfile, on_delete=models.CASCADE, related_name='commissions_received')
     reference_product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, related_name='inspired_commissions')
+    # Nullable FK: existing commissions pre-date projects; SET_NULL preserves history if project deleted
+    project = models.ForeignKey(
+        'common.Project',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='commissions',
+    )
     title = models.CharField(max_length=200)
     custom_brief = models.TextField()
     budget_kes = models.DecimalField(

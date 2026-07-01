@@ -30,7 +30,7 @@ const Home: React.FC = () => {
                     >
                       Browse Artisans
                     </Link>
-                    {user?.role === 'DESIGNER' && (
+                    {user?.role === 'INTERIOR_DESIGNER' && (
                       <Link
                         to="/commission/new"
                         className="px-8 py-3 text-center bg-white text-amber-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors border-2 border-amber-600"

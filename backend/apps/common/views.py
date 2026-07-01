@@ -180,7 +180,7 @@ class GlobalSearchView(APIView):
                 'message': 'Please provide search parameters'
             })
         
-        if request.user.role == 'DESIGNER':
+        if request.user.role == 'INTERIOR_DESIGNER':
             # Search artisans
             artisan_query = Q()
             if query:
@@ -362,7 +362,11 @@ class ProjectDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated, IsDesigner]
     
     def get_queryset(self):
-        return Project.objects.filter(designer=self.request.user).prefetch_related('items__product')
+        return Project.objects.filter(designer=self.request.user).prefetch_related(
+            'items__product',
+            'commissions__artisan__user',
+            'commissions__reference_product',
+        )
     
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
@@ -372,9 +376,32 @@ class ProjectDetailView(generics.RetrieveUpdateDestroyAPIView):
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = ProjectSerializer(instance)
+        project_data = serializer.data
+
+        # Attach commissions list to project detail response
+        from apps.commissions.models import Commission
+        commissions_qs = Commission.objects.filter(project=instance).select_related(
+            'artisan__user', 'reference_product'
+        ).order_by('-created_at')
+        commissions_data = [
+            {
+                'id': c.id,
+                'title': c.title,
+                'artisan_name': c.artisan.business_name or c.artisan.user.get_full_name(),
+                'item_title': c.reference_product.name if c.reference_product else None,
+                'custom_brief': c.custom_brief[:200],
+                'budget_kes': float(c.budget_kes),
+                'status': c.status,
+                'status_display': c.get_status_display(),
+                'created_at': c.created_at.isoformat(),
+            }
+            for c in commissions_qs
+        ]
+        project_data['commissions'] = commissions_data
+
         return Response({
             'success': True,
-            'data': serializer.data
+            'data': project_data
         })
     
     def update(self, request, *args, **kwargs):

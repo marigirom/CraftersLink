@@ -28,7 +28,7 @@ interface ProductCardProps {
       average_rating?: number;
     };
   };
-  role: 'ARTISAN' | 'DESIGNER';
+  role: 'ARTISAN' | 'INTERIOR_DESIGNER';
   onEdit?: (id: number) => void;
   onDelete?: (id: number) => void;
   onViewProfile?: (artisanId: number) => void;
@@ -46,7 +46,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const navigate = useNavigate();
 
   const handleCardClick = () => {
-    if (role === 'DESIGNER') {
+    if (role === 'INTERIOR_DESIGNER') {
       navigate(`/designer/products/${product.id}`);
     }
   };
@@ -91,9 +91,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <div
-      onClick={role === 'DESIGNER' ? handleCardClick : undefined}
+      onClick={role === 'INTERIOR_DESIGNER' ? handleCardClick : undefined}
       className={`bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden flex flex-col h-full ${
-        role === 'DESIGNER'
+        role === 'INTERIOR_DESIGNER'
           ? 'cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all duration-200'
           : 'hover:shadow-lg transition-shadow duration-300'
       }`}
@@ -129,7 +129,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       {/* Card Content */}
       <div className="p-5 flex flex-col flex-grow">
         {/* Artisan Info - Designer View Only */}
-        {role === 'DESIGNER' && product.artisan && (
+        {role === 'INTERIOR_DESIGNER' && product.artisan && (
           <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-100">
             <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-semibold">
               {getArtisanInitials()}
@@ -179,7 +179,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
         {/* Price - Prominent */}
         <div className="mt-auto mb-4">
           <p className="text-2xl font-bold text-amber-600">
-            KES {product.price_kes.toLocaleString()}
+            {product.price_kes != null
+              ? `KES ${Number(product.price_kes).toLocaleString()}`
+              : 'Price on request'}
           </p>
         </div>
 
@@ -210,7 +212,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </>
           )}
 
-          {role === 'DESIGNER' && product.artisan && (
+          {role === 'INTERIOR_DESIGNER' && product.artisan && (
             <>
               <button
                 onClick={(e) => {

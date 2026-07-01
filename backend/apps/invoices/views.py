@@ -39,7 +39,7 @@ class InvoiceListView(generics.ListAPIView):
     def get_queryset(self):
         """Filter invoices by user role"""
         user = self.request.user
-        if user.role == 'DESIGNER':
+        if user.role == 'INTERIOR_DESIGNER':
             return Invoice.objects.filter(
                 commission__designer=user
             ).select_related('commission__designer', 'commission__artisan__user')

@@ -11,7 +11,7 @@ interface Product {
   description: string;
   material: string;
   dimensions: string;
-  price_kes: number;
+  price_kes: number | null;
   availability_status: string;
   status_display: string;
   primary_image: string;
@@ -25,6 +25,12 @@ interface Product {
   created_at: string;
 }
 
+/** Format a KES price value. Returns "Price on request" when the value is null/undefined. */
+const formatPrice = (value: number | null | undefined): string => {
+  if (value == null) return 'Price on request';
+  return `KES ${Number(value).toLocaleString()}`;
+};
+
 const ProductDetailPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
@@ -34,6 +40,7 @@ const ProductDetailPage: React.FC = () => {
   const [error, setError] = useState('');
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showCommissionModal, setShowCommissionModal] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     if (!productId) return;
@@ -44,10 +51,16 @@ const ProductDetailPage: React.FC = () => {
       
       try {
         const response = await api.get(`/artisans/products/${productId}/`);
-        setProduct(response.data);
+        // The backend wraps its response as { success, data: {...} }
+        const productData = response.data?.data ?? response.data;
+        setProduct(productData);
       } catch (err: any) {
         console.error('Error fetching product:', err);
-        setError(err.response?.data?.message || 'Product not found.');
+        if (err.response?.status === 404) {
+          setError('Product not found.');
+        } else {
+          setError(err.response?.data?.message || 'Failed to load product details.');
+        }
       } finally {
         setLoading(false);
       }
@@ -57,7 +70,7 @@ const ProductDetailPage: React.FC = () => {
   }, [productId]);
 
   const getArtisanInitials = () => {
-    if (!product) return 'A';
+    if (!product?.artisan_name) return 'A';
     const names = product.artisan_name.split(' ');
     return names.map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2);
   };
@@ -68,6 +81,7 @@ const ProductDetailPage: React.FC = () => {
     }
   };
 
+  // ── Loading state ─────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -79,6 +93,7 @@ const ProductDetailPage: React.FC = () => {
     );
   }
 
+  // ── Error / not-found state ───────────────────────────────────────────────
   if (error || !product) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -100,8 +115,10 @@ const ProductDetailPage: React.FC = () => {
     );
   }
 
+  // ── Render — product is guaranteed non-null beyond this point ─────────────
   const isInStock = product.availability_status === 'IN_STOCK';
   const isCommissionable = product.availability_status === 'COMMISSIONABLE';
+  const formattedPrice = formatPrice(product.price_kes);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -160,34 +177,34 @@ const ProductDetailPage: React.FC = () => {
               {/* Description */}
               <div className="mb-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-3">About this piece</h2>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{product.description}</p>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line overflow-y-auto max-h-64">{product.description}</p>
               </div>
 
               {/* Details Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t border-gray-200">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Materials</p>
-                  <p className="text-gray-900 font-medium">{product.material}</p>
+                  <p className="text-gray-900 font-medium">{product.material || '—'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Dimensions</p>
-                  <p className="text-gray-900 font-medium">{product.dimensions}</p>
+                  <p className="text-gray-900 font-medium">{product.dimensions || '—'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Price</p>
-                  <p className="text-2xl font-bold text-amber-600">KES {product.price_kes.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-amber-600">{formattedPrice}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Category</p>
-                  <p className="text-gray-900 font-medium">{product.craft_category}</p>
+                  <p className="text-gray-900 font-medium">{product.craft_category || '—'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Listed by</p>
-                  <p className="text-gray-900 font-medium">{product.artisan_name}</p>
+                  <p className="text-gray-900 font-medium">{product.artisan_name || '—'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Location</p>
-                  <p className="text-gray-900 font-medium">{product.artisan_location}</p>
+                  <p className="text-gray-900 font-medium">{product.artisan_location || '—'}</p>
                 </div>
               </div>
             </div>
@@ -240,7 +257,7 @@ const ProductDetailPage: React.FC = () => {
                   </p>
                   <div className="mb-4 p-4 bg-amber-50 rounded-lg">
                     <p className="text-sm text-gray-600 mb-1">Price</p>
-                    <p className="text-3xl font-bold text-amber-600">KES {product.price_kes.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-amber-600">{formattedPrice}</p>
                   </div>
                   <button
                     onClick={() => setShowInvoiceModal(true)}
@@ -259,7 +276,7 @@ const ProductDetailPage: React.FC = () => {
                   </p>
                   <div className="mb-4 p-4 bg-amber-50 rounded-lg">
                     <p className="text-sm text-gray-600 mb-1">Starting from</p>
-                    <p className="text-3xl font-bold text-amber-600">KES {product.price_kes.toLocaleString()}</p>
+                    <p className="text-3xl font-bold text-amber-600">{formattedPrice}</p>
                   </div>
                   <button
                     onClick={() => setShowCommissionModal(true)}
@@ -277,15 +294,40 @@ const ProductDetailPage: React.FC = () => {
       {/* Modals */}
       {showInvoiceModal && product && (
         <InvoiceModal
-          product={product}
+          product={{
+            id: product.id,
+            name: product.name,
+            price_kes: product.price_kes ?? 0,
+            artisan_id: product.artisan_id,
+            artisan_name: product.artisan_name,
+          }}
           onClose={() => setShowInvoiceModal(false)}
         />
       )}
       
+      {successMsg && (
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg text-sm font-medium max-w-md text-center">
+          {successMsg}
+          <button onClick={() => setSuccessMsg('')} className="ml-4 text-green-200 hover:text-white">✕</button>
+        </div>
+      )}
       {showCommissionModal && product && (
         <CommissionModal
-          product={product}
+          product={{
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            material: product.material,
+            price_kes: product.price_kes ?? 0,
+            artisan_id: product.artisan_id,
+            artisan_name: product.artisan_name,
+          }}
           onClose={() => setShowCommissionModal(false)}
+          onSuccess={(msg) => {
+            setShowCommissionModal(false);
+            setSuccessMsg(msg);
+            setTimeout(() => setSuccessMsg(''), 6000);
+          }}
         />
       )}
     </div>

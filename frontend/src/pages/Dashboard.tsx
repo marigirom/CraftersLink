@@ -78,7 +78,7 @@ const Dashboard: React.FC = () => {
   const pendingInvoicesCount = invoices?.filter(i => i?.status === 'sent')?.length || 0;
 
   // Role-specific stats with dummy data
-  const isDesigner = user?.role === 'DESIGNER';
+  const isDesigner = user?.role === 'INTERIOR_DESIGNER';
   const isArtisan = user?.role === 'ARTISAN';
 
   const getStatusColor = (status: string) => {

@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Pages
 import Home from './pages/Home';
@@ -24,6 +25,8 @@ import CatalogueBrowse from './pages/designer/CatalogueBrowse';
 import ArtisanDetailPage from './pages/designer/ArtisanDetailPage';
 import ItemDetailPage from './pages/designer/ItemDetailPage';
 import ProductDetailPage from './pages/designer/ProductDetailPage';
+import ProjectsListPage from './pages/designer/ProjectsListPage';
+import ProjectBoard from './pages/designer/ProjectBoard';
 
 // Artisan-specific pages
 import ArtisanDashboard from './pages/artisan/ArtisanDashboard';
@@ -42,7 +45,7 @@ const HomeWithRedirect = () => {
   if (isAuthenticated && user) {
     if (user.role === 'ARTISAN') {
       return <Navigate to="/artisan/dashboard" replace />;
-    } else if (user.role === 'INTERIOR_DESIGNER' || user.role === 'DESIGNER') {
+    } else if (user.role === 'INTERIOR_DESIGNER') {
       return <Navigate to="/designer/dashboard" replace />;
     }
   }
@@ -56,7 +59,7 @@ const DashboardRedirect = () => {
   
   if (user?.role === 'ARTISAN') {
     return <Navigate to="/artisan/dashboard" replace />;
-  } else if (user?.role === 'INTERIOR_DESIGNER' || user?.role === 'DESIGNER') {
+  } else if (user?.role === 'INTERIOR_DESIGNER') {
     return <Navigate to="/designer/dashboard" replace />;
   }
   
@@ -71,6 +74,7 @@ function App() {
           <div className="min-h-screen flex flex-col">
             <Header />
             <main className="flex-grow">
+              <ErrorBoundary>
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<HomeWithRedirect />} />
@@ -142,7 +146,7 @@ function App() {
                 <Route
                   path="/designer/dashboard"
                   element={
-                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER', 'DESIGNER']}>
+                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER']}>
                       <DesignerDashboard />
                     </ProtectedRoute>
                   }
@@ -150,7 +154,7 @@ function App() {
                 <Route
                   path="/designer/catalogue"
                   element={
-                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER', 'DESIGNER']}>
+                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER']}>
                       <CatalogueBrowse />
                     </ProtectedRoute>
                   }
@@ -158,7 +162,7 @@ function App() {
                 <Route
                   path="/designer/products/:productId"
                   element={
-                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER', 'DESIGNER']}>
+                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER']}>
                       <ProductDetailPage />
                     </ProtectedRoute>
                   }
@@ -166,7 +170,7 @@ function App() {
                 <Route
                   path="/designer/catalogue/:artisanId/:itemId"
                   element={
-                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER', 'DESIGNER']}>
+                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER']}>
                       <ItemDetailPage />
                     </ProtectedRoute>
                   }
@@ -174,7 +178,7 @@ function App() {
                 <Route
                   path="/designer/catalogue/:artisanId"
                   element={
-                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER', 'DESIGNER']}>
+                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER']}>
                       <ArtisanDetailPage />
                     </ProtectedRoute>
                   }
@@ -182,7 +186,7 @@ function App() {
                 <Route
                   path="/designer/commissions"
                   element={
-                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER', 'DESIGNER']}>
+                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER']}>
                       <CommissionFlow />
                     </ProtectedRoute>
                   }
@@ -190,7 +194,7 @@ function App() {
                 <Route
                   path="/designer/commission/new"
                   element={
-                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER', 'DESIGNER']}>
+                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER']}>
                       <CommissionFlow />
                     </ProtectedRoute>
                   }
@@ -198,8 +202,24 @@ function App() {
                 <Route
                   path="/designer/profile"
                   element={
-                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER', 'DESIGNER']}>
+                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER']}>
                       <DesignerProfile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/designer/projects"
+                  element={
+                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER']}>
+                      <ProjectsListPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/designer/projects/:projectId"
+                  element={
+                    <ProtectedRoute allowedRoles={['INTERIOR_DESIGNER']}>
+                      <ProjectBoard />
                     </ProtectedRoute>
                   }
                 />
@@ -240,6 +260,7 @@ function App() {
                 {/* 404 */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </ErrorBoundary>
             </main>
             <Footer />
           </div>

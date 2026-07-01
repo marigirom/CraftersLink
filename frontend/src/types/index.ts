@@ -5,7 +5,7 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'ARTISAN' | 'DESIGNER';
+  role: 'ARTISAN' | 'INTERIOR_DESIGNER';
   phone_number?: string;
   profile_image?: string;
   is_verified: boolean;
@@ -67,26 +67,48 @@ export interface ProductImage {
 }
 
 // Commission Types
+export interface CommissionProject {
+  id: number;
+  name: string;
+}
+
 export interface Commission {
   id: number;
   designer: User;
   artisan: ArtisanProfile;
+  reference_product?: Product | null;
+  project?: CommissionProject | null;
   title: string;
-  description: string;
-  budget: string;
-  deadline: string;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
-  requirements: string;
-  reference_images: CommissionImage[];
+  custom_brief: string;
+  budget_kes: string;
+  /** Alias for budget_kes — returned by the API for frontend compatibility */
+  budget?: string;
+  requested_delivery_date: string;
+  agreed_delivery_date?: string | null;
+  actual_delivery_date?: string | null;
+  status: 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'REJECTED';
+  status_display?: string;
+  attachment_urls: string[];
+  notes?: string;
   milestones: Milestone[];
   created_at: string;
   updated_at: string;
 }
 
-export interface CommissionImage {
+/** Lightweight commission record returned by the list endpoint */
+export interface CommissionListItem {
   id: number;
-  image: string;
-  caption?: string;
+  designer_name: string;
+  artisan_name: string;
+  title: string;
+  budget_kes: string;
+  budget?: string;
+  requested_delivery_date: string;
+  status: string;
+  status_display?: string;
+  project?: CommissionProject | null;
+  item_title?: string | null;
+  created_at: string;
 }
 
 export interface Milestone {
@@ -139,18 +161,20 @@ export interface RegisterData {
   password_confirm: string;
   first_name: string;
   last_name: string;
-  role: 'ARTISAN' | 'DESIGNER';
+  role: 'ARTISAN' | 'INTERIOR_DESIGNER';
   phone_number?: string;
 }
 
 export interface CommissionFormData {
-  artisan_id: number;
+  artisan: number;
+  reference_product?: number;
+  project_id?: number;
   title: string;
-  description: string;
-  budget: string;
-  deadline: string;
-  requirements: string;
-  reference_images?: File[];
+  custom_brief: string;
+  budget_kes: number;
+  requested_delivery_date: string;
+  attachment_urls?: string[];
+  notes?: string;
 }
 
 // API Response Types

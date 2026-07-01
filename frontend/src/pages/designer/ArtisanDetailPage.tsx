@@ -35,11 +35,23 @@ interface Product {
   id: number;
   name: string;
   craft_category: string;
-  price_kes: number;
+  price_kes: number | null;
   primary_image: string;
   status_display: string;
   status: string;
 }
+
+/** Format a KES price value. Returns "Price on request" when null/undefined. */
+const formatPrice = (value: number | null | undefined): string => {
+  if (value == null) return 'Price on request';
+  return `KES ${Number(value).toLocaleString()}`;
+};
+
+/** Format a numeric rating. Returns "N/A" when null/undefined. */
+const formatRating = (value: number | null | undefined): string => {
+  if (value == null) return 'N/A';
+  return Number(value).toFixed(1);
+};
 
 const ArtisanDetailPage: React.FC = () => {
   const { artisanId } = useParams<{ artisanId: string }>();
@@ -193,7 +205,7 @@ const ArtisanDetailPage: React.FC = () => {
                   <div className="flex items-center gap-1">
                     <Star size={20} className="text-yellow-500" />
                     <span className="text-lg font-semibold">
-                      {artisan.average_rating.toFixed(1)}
+                      {formatRating(artisan.average_rating)}
                     </span>
                     <span className="text-gray-600">rating</span>
                   </div>
@@ -217,7 +229,7 @@ const ArtisanDetailPage: React.FC = () => {
                   </Tag>
                 </div>
 
-                <p className="text-gray-700 leading-relaxed">{artisan.bio}</p>
+                <p className="text-gray-700 leading-relaxed line-clamp-4">{artisan.bio}</p>
 
                 <div className="mt-6 flex gap-3">
                   <Button kind="primary" size="lg">
@@ -279,11 +291,11 @@ const ArtisanDetailPage: React.FC = () => {
                         className="w-full h-48 object-cover"
                       />
                       <div className="p-4">
-                        <h3 className="font-semibold mb-2 truncate">{product.name}</h3>
-                        <div className="flex items-center justify-between mb-2">
+                         <h3 className="font-semibold mb-2 truncate" title={product.name}>{product.name}</h3>
+                         <div className="flex items-center justify-between mb-2">
                           <p className="text-lg font-bold text-blue-600">
-                            KES {product.price_kes.toLocaleString()}
-                          </p>
+                             {formatPrice(product.price_kes)}
+                           </p>
                           <Tag type={getCategoryColor(product.craft_category)} size="sm">
                             {product.craft_category}
                           </Tag>

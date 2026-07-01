@@ -25,7 +25,7 @@ class IsDesigner(permissions.BasePermission):
         return (
             request.user and
             request.user.is_authenticated and
-            request.user.role in ['DESIGNER', 'INTERIOR_DESIGNER']
+            request.user.role == 'INTERIOR_DESIGNER'
         )
 
 
@@ -89,7 +89,7 @@ class IsDesignerOwner(permissions.BasePermission):
         return (
             request.user and
             request.user.is_authenticated and
-            request.user.role in ['DESIGNER', 'INTERIOR_DESIGNER']
+            request.user.role == 'INTERIOR_DESIGNER'
         )
     
     def has_object_permission(self, request, view, obj):

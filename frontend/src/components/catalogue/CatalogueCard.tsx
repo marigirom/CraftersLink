@@ -24,7 +24,7 @@ interface CatalogueCardProps {
       average_rating?: number;
     };
   };
-  userRole: 'ARTISAN' | 'DESIGNER';
+  userRole: 'ARTISAN' | 'INTERIOR_DESIGNER';
   onSave?: (itemId: number) => void;
   onEdit?: (itemId: number) => void;
   onDelete?: (itemId: number) => void;
@@ -84,7 +84,7 @@ const CatalogueCard: React.FC<CatalogueCardProps> = ({
   };
 
   const handleView = () => {
-    if (userRole === 'DESIGNER' && item.artisan) {
+    if (userRole === 'INTERIOR_DESIGNER' && item.artisan) {
       navigate(`/dashboard/designer/catalogue/${item.artisan.id}/${item.id}`);
     } else if (userRole === 'ARTISAN') {
       navigate(`/dashboard/artisan/catalogue/${item.id}`);
@@ -179,7 +179,7 @@ const CatalogueCard: React.FC<CatalogueCardProps> = ({
         </div>
 
         {/* Artisan Info (for Designer view) */}
-        {userRole === 'DESIGNER' && item.artisan && (
+        {userRole === 'INTERIOR_DESIGNER' && item.artisan && (
           <div className="mb-3 pb-3 border-b border-gray-200">
             <div className="flex items-center text-sm text-gray-600">
               <User size={16} className="mr-1" />
@@ -201,7 +201,7 @@ const CatalogueCard: React.FC<CatalogueCardProps> = ({
 
         {/* Actions */}
         <div className="flex gap-2">
-          {userRole === 'DESIGNER' && (
+          {userRole === 'INTERIOR_DESIGNER' && (
             <>
               <Button
                 kind="primary"

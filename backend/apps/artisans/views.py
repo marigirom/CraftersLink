@@ -429,4 +429,87 @@ class ArtisanCatalogueView(generics.RetrieveAPIView):
         })
 
 
+class ArtisanRecentProductsView(generics.ListAPIView):
+    """Return the 5 most recently uploaded products for the authenticated artisan."""
+    serializer_class = ProductListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        try:
+            profile = ArtisanProfile.objects.get(user=self.request.user)
+        except ArtisanProfile.DoesNotExist:
+            return Product.objects.none()
+        return profile.products.order_by('-created_at')[:5]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        return Response({
+            'success': True,
+            'data': serializer.data
+        })
+
+
+class DesignerRecentActivityView(generics.GenericAPIView):
+    """Return the designer's 5 most recent commissions and 5 most recent invoices."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        from apps.commissions.models import Commission
+        from apps.invoices.models import Invoice
+
+        commissions_qs = (
+            Commission.objects
+            .filter(designer=request.user)
+            .select_related('artisan__user', 'reference_product', 'project')
+            .order_by('-created_at')[:5]
+        )
+        commissions = [
+            {
+                'id': c.id,
+                'title': c.title,
+                'artisan_name': c.artisan.business_name or c.artisan.user.get_full_name(),
+                'item_title': c.reference_product.name if c.reference_product else None,
+                'status': c.status,
+                'status_display': c.get_status_display(),
+                'budget_kes': float(c.budget_kes),
+                'budget': float(c.budget_kes),
+                'project': {'id': c.project.id, 'name': c.project.name} if c.project_id else None,
+                'created_at': c.created_at.isoformat(),
+            }
+            for c in commissions_qs
+        ]
+
+        invoices_qs = (
+            Invoice.objects
+            .filter(commission__designer=request.user)
+            .select_related('commission__artisan__user')
+            .order_by('-created_at')[:5]
+        )
+        invoices = [
+            {
+                'id': inv.id,
+                'invoice_number': inv.invoice_number,
+                'commission_title': inv.commission.title,
+                'artisan_name': (
+                    inv.commission.artisan.business_name
+                    or inv.commission.artisan.user.get_full_name()
+                ),
+                'total_kes': float(inv.total_kes),
+                'status': inv.status,
+                'status_display': inv.get_status_display(),
+                'created_at': inv.created_at.isoformat(),
+            }
+            for inv in invoices_qs
+        ]
+
+        return Response({
+            'success': True,
+            'data': {
+                'commissions': commissions,
+                'invoices': invoices,
+            }
+        })
+
+
 # Made with Bob
